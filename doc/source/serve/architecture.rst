@@ -29,7 +29,7 @@ There are three kinds of actors that are created to make up a Serve instance:
 
 Lifetime of a Request
 ---------------------
-When an HTTP request is sent to the router, the follow things happen:
+When an HTTP request is sent to the router, the following things happen:
 
 - The HTTP request is received and parsed.
 - The correct :ref:`endpoint <serve-endpoint>` associated with the HTTP url path is looked up.

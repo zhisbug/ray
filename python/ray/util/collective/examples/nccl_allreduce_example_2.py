@@ -4,7 +4,7 @@ import cupy as cp
 
 import ray.util.collective as collective
 
-@ray.remote(num_gpus=0.1)
+@ray.remote(num_gpus=0.3)
 class Worker:
     def __init__(self):
         self.send = cp.ones((4,), dtype=cp.float32)

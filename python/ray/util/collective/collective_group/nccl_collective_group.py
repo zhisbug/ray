@@ -154,6 +154,7 @@ class NCCLGroup(BaseGroup):
         # TODO(Hao): later change this to use device keys and query from cache.
         # TODO(Hao): implement a thin wrapper
         if not self._nccl_comm:
+            print(self.world_size, self.nccl_uid, self.rank)
             self._nccl_comm = nccl_util.create_nccl_communicator(
                 self.world_size, self.nccl_uid, self.rank)
         return self._nccl_comm

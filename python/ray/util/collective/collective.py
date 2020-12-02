@@ -149,7 +149,7 @@ class GroupManager(object):
                 ray.kill(store)
         g.destroy()
 
-@ray.remote(num_gpus=0.1)
+@ray.remote(num_gpus=0.3)
 class GroupManager_2(object):
     """
     Use this class to manage the collective groups we created so far;

@@ -9,8 +9,6 @@ from ray.util.collective.collective_group import nccl_util
 from ray.util.collective.collective_group.base_collective_group import BaseGroup
 from ray.util.collective.types import AllReduceOptions, BarrierOptions
 from ray.util.collective.const import NAMED_ACTOR_STORE_SUFFIX
-
-
 logger = logging.getLogger(__name__)
 
 # TODO(Hao):
@@ -60,11 +58,10 @@ class Rendezvous:
         uid = ray.get(self._store.get_id.remote())
         return uid
 
-
 class NCCLGroup(BaseGroup):
-    def __init__(self, world_size, rank, group_name):
+    def __init__(self, world_size, rank, group_name,uid=None):
         """Init an NCCL collective group."""
-        super(NCCLGroup, self).__init__(world_size, rank, group_name)
+        super(NCCLGroup, self).__init__(world_size, rank, group_name, uid)
         self._nccl_uid = None
 
         # TODO(Hao): change this to a be a cache
@@ -76,12 +73,14 @@ class NCCLGroup(BaseGroup):
         if nccl_util.get_nccl_runtime_version() < 2704:
             logger.warning('NCCL send/recv calls requires NCCL>=2.7.4')
 
-        self._rendezvous = Rendezvous(self.group_name)
-        self._rendezvous.meet_at_store()
+        if uid is None:
+            self._rendezvous = Rendezvous(self.group_name)
+            self._rendezvous.meet_at_store()
 
-        # Setup the nccl uid using the store
-        self._init_nccl_unique_id()
-
+            # Setup the nccl uid using the store
+            self._init_nccl_unique_id()
+        else:
+            self._nccl_uid = uid 
         # Setup a tensor for barrier calls
         self._barrier_tensor = cupy.array([1])
 

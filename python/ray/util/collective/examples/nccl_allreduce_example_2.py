@@ -4,18 +4,13 @@ import cupy as cp
 
 import ray.util.collective as collective
 
-@ray.remote(num_gpus=1)
+@ray.remote(num_gpus=0.1)
 class Worker:
     def __init__(self):
         self.send = cp.ones((4,), dtype=cp.float32)
-        self.recv = cp.zeros((4,), dtype=cp.float32)
-
-    def setup(self, world_size, rank):
-        collective.init_collective_group('nccl', world_size, rank, 'default')
-        return True
 
     def compute(self):
-        collective.allreduce(self.send, 'default')
+        collective.allreduce(self.send, '177')
         print(self.send)
         return self.send
 
@@ -27,13 +22,14 @@ if __name__ == "__main__":
 
     num_workers = 2
     workers = []
-    init_rets = []
     for i in range(num_workers):
         w = Worker.remote()
         workers.append(w)
-        m = ray.get(w.setup.remote(num_workers, i))
-        init_rets.append(m)
+    options = {'group_name' : '177',
+                'world_size' : 2,
+                'rank' : [0,1],
+                'backend' : 'nccl'}
+    collective.declare_collective_group(workers, options)
     results = ray.get([w.compute.remote() for w in workers])
     print(results)
-    # print(results)
     ray.shutdown()

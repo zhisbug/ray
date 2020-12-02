@@ -7,7 +7,7 @@ from ray.util.collective.types import AllReduceOptions, BarrierOptions
 
 
 class BaseGroup(six.with_metaclass(ABCMeta)):
-    def __init__(self, world_size, rank, group_name):
+    def __init__(self, world_size, rank, group_name,uid):
         """
         Init the process group with basic information.
 

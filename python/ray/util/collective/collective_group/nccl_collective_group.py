@@ -59,9 +59,9 @@ class Rendezvous:
         return uid
 
 class NCCLGroup(BaseGroup):
-    def __init__(self, world_size, rank, group_name,uid=None):
+    def __init__(self, world_size, rank, group_name):
         """Init an NCCL collective group."""
-        super(NCCLGroup, self).__init__(world_size, rank, group_name, uid)
+        super(NCCLGroup, self).__init__(world_size, rank, group_name)
         self._nccl_uid = None
 
         # TODO(Hao): change this to a be a cache

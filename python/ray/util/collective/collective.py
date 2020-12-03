@@ -1,12 +1,12 @@
 """APIs exposed under the namespace ray.util.collective."""
 import logging
 from collections import defaultdict
+import os
 import ray
 from ray.util.collective import types
 from ray.util.collective.const import NAMED_ACTOR_STORE_SUFFIX
 import ray.worker
 import cupy.cuda.nccl as nccl
-
 # Get the availability information first by importing information
 _MPI_AVAILABLE = True
 _NCCL_AVAILABLE = True
@@ -211,7 +211,6 @@ def declare_collective_group(actors, group_options):
     except:
         raise ValueError("group options incomplete.")
 
-    _backend_check(backend)
     name = "info" + group_name
     try:
         ray.get_actor(name)
@@ -283,7 +282,14 @@ def _check_and_get_group(group_name):
             r = rank[ids.index(id_)]
             _group_mgr.create_collective_group(backend, world_size, r, group_name)
         except:
-            raise ValueError('The collective group {} is not initialized.'.format(group_name))
+            # check if this group is initialized using options()
+            if os.environ["collective_group_name"] == group_name:
+                rank = int(os.environ["collective_rank"])
+                world_size = int(os.environ["collective_world_size"])
+                backend = os.environ["collective_backend"]
+                _group_mgr.create_collective_group(backend, world_size, rank, group_name)
+            else:
+                raise ValueError('The collective group {} is not initialized.'.format(group_name))
     # TODO(Hao): check if this rank is in the group.
     g = _group_mgr.get_group_by_name(group_name)
     return g

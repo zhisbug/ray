@@ -1,4 +1,5 @@
 import ray
+import os
 ray.init()
 
 @ray.remote(num_gpus=1)
@@ -7,8 +8,8 @@ class Actor:
         pass
 
     def compute(self):
-        pass
+        return os.environ["1"]
 
 # might work?
-worker = Actor.options(collective={})# .remote()
-print(worker._collective)
+worker = Actor.options(override_environment_variables={"1" : "2"}).remote()
+print(ray.get(worker.compute.remote()))

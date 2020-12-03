@@ -10,7 +10,8 @@ from ray.util.collective.collective_group.base_collective_group import BaseGroup
 from ray.util.collective.types import AllReduceOptions, BarrierOptions
 from ray.util.collective.const import NAMED_ACTOR_STORE_SUFFIX
 logger = logging.getLogger(__name__)
-
+#logging.getLogger().setLevel(logging.DEBUG)
+#logging.getLogger().setLevel(logging.DEBUG)
 # TODO(Hao):
 # (1) stream management, instead of using the default stream, using a dedicate stream
 # (2) communicator management, adding a caching mechanism to enable
@@ -63,7 +64,6 @@ class NCCLGroup(BaseGroup):
         """Init an NCCL collective group."""
         super(NCCLGroup, self).__init__(world_size, rank, group_name)
         self._nccl_uid = None
-
         # TODO(Hao): change this to a be a cache
         self._nccl_comm = None
 
@@ -73,14 +73,10 @@ class NCCLGroup(BaseGroup):
         if nccl_util.get_nccl_runtime_version() < 2704:
             logger.warning('NCCL send/recv calls requires NCCL>=2.7.4')
 
-        if uid is None:
-            self._rendezvous = Rendezvous(self.group_name)
-            self._rendezvous.meet_at_store()
-
-            # Setup the nccl uid using the store
-            self._init_nccl_unique_id()
-        else:
-            self._nccl_uid = uid
+        self._rendezvous = Rendezvous(self.group_name)
+        self._rendezvous.meet_at_store()
+        # Setup the nccl uid using the store
+        self._init_nccl_unique_id()
         # Setup a tensor for barrier calls
         self._barrier_tensor = cupy.array([1])
 

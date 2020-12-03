@@ -8,7 +8,7 @@ import ray.signature as signature
 import ray.worker
 from ray.util.placement_group import (
     PlacementGroup, check_placement_group_index, get_current_placement_group)
-#from ray.util.collective import collective as col
+from ray.util.collective_utils import collective_to_envs
 from ray import ActorClassID, Language
 from ray._raylet import PythonFunctionDescriptor
 from ray import cross_language
@@ -656,6 +656,10 @@ class ActorClass:
             function_signature = meta.method_meta.signatures["__init__"]
             creation_args = signature.flatten_args(function_signature, args,
                                                    kwargs)
+        if collective:
+            override_environment_variables = collective_to_envs(collective, 
+                    override_environment_variables)
+        
         actor_id = worker.core_worker.create_actor(
             meta.language,
             meta.actor_creation_function_descriptor,
@@ -675,13 +679,6 @@ class ActorClass:
             extension_data=str(actor_method_cpu),
             override_environment_variables=override_environment_variables
             or dict())
-        
-        if collective:
-            pass
-           # col.init_collective_group(backend=collective["backend"],
-            #                          world_size=collective["world_size"],
-            #                          rank=collective["rank"],
-            #                          group_name=collective["group_name"])
 
         actor_handle = ActorHandle(
             meta.language,

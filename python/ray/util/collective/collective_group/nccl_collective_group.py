@@ -9,7 +9,7 @@ from ray.util.collective.collective_group import nccl_util
 from ray.util.collective.collective_group.base_collective_group \
     import BaseGroup
 from ray.util.collective.types import AllReduceOptions, \
-    BarrierOptions, Backend
+    BarrierOptions, Backend, ReduceOptions
 from ray.util.collective.const import get_nccl_store_name
 
 logger = logging.getLogger(__name__)
@@ -167,6 +167,29 @@ class NCCLGroup(BaseGroup):
         Returns:
         """
         self.allreduce(self._barrier_tensor)
+
+    def reduce(self, tensor, reduce_options=ReduceOptions()):
+        """
+        Reduce tensor to a destination process following options.
+
+        Args:
+            tensor: the tensor to be reduced.
+            reduce_options: reduce options
+
+        Returns:
+            None
+        """
+        comm = self._get_nccl_communicator()
+        stream = self._get_cuda_stream()
+
+        dtype = nccl_util.get_nccl_tensor_dtype(tensor)
+        ptr = nccl_util.get_tensor_ptr(tensor)
+        n_elems = nccl_util.get_tensor_n_elements(tensor)
+        reduce_op = nccl_util.get_nccl_reduce_op(reduce_options.reduceOp)
+
+        # in-place reduce
+        comm.reduce(ptr, ptr, n_elems, dtype, reduce_op,
+                    reduce_options.root_rank, stream.ptr)
 
     def _get_nccl_communicator(self):
         """

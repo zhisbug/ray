@@ -3,7 +3,8 @@ from abc import ABCMeta
 from abc import abstractmethod
 import six
 
-from ray.util.collective.types import AllReduceOptions, BarrierOptions
+from ray.util.collective.types import AllReduceOptions, BarrierOptions, \
+    ReduceOptions, AllGatherOptions, BroadcastOptions, ReduceScatterOptions
 
 
 class BaseGroup(six.with_metaclass(ABCMeta)):
@@ -51,3 +52,20 @@ class BaseGroup(six.with_metaclass(ABCMeta)):
     @abstractmethod
     def barrier(self, barrier_options=BarrierOptions()):
         raise NotImplementedError()
+
+    @abstractmethod
+    def reduce(self, tensor, reduce_options=ReduceOptions()):
+        raise NotImplementedError()
+
+    # @abstractmethod
+    # def allgather(self):
+    #     pass
+    #
+    #
+    # @abstractmethod
+    # def broadcast(self):
+    #     pass
+    #
+    # @abstractmethod
+    # def reduce_scatter(self):
+    #     pass

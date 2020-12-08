@@ -26,6 +26,10 @@ class Worker:
         col.allreduce(self.buffer, group_name, op)
         return self.buffer
 
+    def do_reduce(self, group_name="default", dst_rank=0, op=ReduceOp.SUM):
+        col.reduce(self.buffer, group_name, dst_rank, op)
+        return self.buffer
+
     def destroy_group(self, group_name="default"):
         col.destroy_collective_group(group_name)
         return True

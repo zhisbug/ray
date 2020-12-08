@@ -227,6 +227,29 @@ def barrier(group_name):
     g.barrier()
 
 
+def reduce(tensor, group_name: str, dst_rank: int, op=types.ReduceOp.SUM):
+    """
+    Reduce the tensor across the group to the destination rank.
+
+    Args:
+        tensor:
+        group_name:
+        dst_rank:
+        op:
+
+    Returns:
+        None
+    """
+    _check_single_tensor_input(tensor)
+    g = _check_and_get_group(group_name)
+
+    # check dst rank
+    _check_rank_valid(g, dst_rank)
+    opts = types.ReduceOptions()
+    opts.reduceOp = op
+    opts.root_rank = dst_rank
+    g.reduce(tensor, opts)
+
 def _check_and_get_group(group_name):
     """Check the existence and return the group handle."""
     if not is_group_initialized(group_name):
@@ -259,3 +282,10 @@ def _check_single_tensor_input(tensor):
             return
     raise RuntimeError("Unrecognized tensor type. Supported types are: "
                        "np.ndarray, torch.Tensor, cupy.ndarray.")
+
+def _check_rank_valid(g, rank: int):
+    if rank < 0:
+        raise ValueError("rank '{}' is negative.".format(rank))
+    if rank > g.world_size:
+        raise ValueError("rank '{}' is greater than world size "
+                         "'{}'".format(rank, g.world_size))

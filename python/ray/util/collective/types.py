@@ -68,3 +68,23 @@ class AllReduceOptions:
 
 class BarrierOptions:
     timeout = unset_timeout
+
+
+class ReduceOptions:
+    reduceOp = ReduceOp.SUM
+    root_rank = 0
+    timeout = unset_timeout
+
+
+class AllGatherOptions:
+    timeout = unset_timeout
+
+
+class BroadcastOptions:
+    root_rank = 0
+    timeout = unset_timeout
+
+
+class ReduceScatterOptions:
+    reduceOp = ReduceOp.SUM
+    timeout = unset_timeout

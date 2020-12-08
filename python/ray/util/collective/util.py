@@ -23,3 +23,22 @@ class NCCLUniqueIDStore(object):
                 "The NCCL ID has not been set yet for store {}".format(
                     self.name))
         return self.nccl_id
+
+@ray.remote
+class MPIUniqueIDStore(object):
+    """MPIUniqueID Store as a named actor."""
+
+    def __init__(self, name):
+        self.name = name
+        self.mpi_id = None
+
+    def set_id(self, uid):
+        self.mpi_id = uid
+        return self.mpi_id
+
+    def get_id(self):
+        if not self.mpi_id:
+            logger.warning(
+                "The MPI ID has not been set yet for store {}".format(
+                    self.name))
+        return self.mpi_id

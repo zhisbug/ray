@@ -6,14 +6,15 @@ from ray.util.collective import types
 from ray.util.collective.const import get_nccl_store_name
 
 # Get the availability information first by importing information
-_MPI_AVAILABLE = False
+_MPI_AVAILABLE = True
 _NCCL_AVAILABLE = True
 
-# try:
-#     from ray.util.collective.collective_group.mpi_collective_group
-#     import MPIGroup
-# except ImportError:
-#     _MPI_AVAILABLE = False
+logger = logging.getLogger(__name__)
+
+try:
+    from ray.util.collective.collective_group import MPIGroup
+except ImportError:
+    _MPI_AVAILABLE = False
 
 try:
     from ray.util.collective.collective_group import NCCLGroup
@@ -51,7 +52,17 @@ class GroupManager(object):
         """
         backend = types.Backend(backend)
         if backend == types.Backend.MPI:
-            raise NotImplementedError()
+            if rank == 0:
+                group_uid = MPIGroup.get_unique_id()
+                print("group_uid:{}, len:{}".format(group_uid,len(group_uid)))
+                store_name = group_name + "_unique_id_actor"
+                from ray.util.collective.util import MPIUniqueIDStore
+                store = MPIUniqueIDStore.options(name=store_name, lifetime="detached").remote(store_name)
+                ray.wait([store.set_id.remote(group_uid)])
+            logging.debug('creating MPI group: {}'.format(group_name))
+            g = MPIGroup(world_size, rank, group_name)
+            self._name_group_map[group_name] = g
+            self._group_name_map[g] = group_name
         elif backend == types.Backend.NCCL:
             # create the ncclUniqueID
             if rank == 0:
@@ -230,6 +241,7 @@ def barrier(group_name):
 def _check_and_get_group(group_name):
     """Check the existence and return the group handle."""
     if not is_group_initialized(group_name):
+        # pass
         raise RuntimeError("The collective group '{}' is not "
                            "initialized in the process.".format(group_name))
     g = _group_mgr.get_group_by_name(group_name)

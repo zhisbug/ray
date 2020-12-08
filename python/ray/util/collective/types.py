@@ -45,8 +45,8 @@ class Backend(object):
         if backend == Backend.UNRECOGNIZED:
             raise ValueError("Unrecognized backend: '{}'. "
                              "Only NCCL is supported".format(name))
-        if backend == Backend.MPI:
-            raise NotImplementedError()
+        # if backend == Backend.MPI:
+        #     raise NotImplementedError()
         return backend
 
 

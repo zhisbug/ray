@@ -176,7 +176,7 @@ def get_rank(group_name: str = "default") -> int:
     return g.rank
 
 
-def get_world_size(group_name="default") -> int:
+def get_world_size(group_name : str = "default") -> int:
     """
     Return the size of the collective gropu with the given name.
 
@@ -194,7 +194,7 @@ def get_world_size(group_name="default") -> int:
     return g.world_size
 
 
-def allreduce(tensor, group_name: str, op=types.ReduceOp.SUM):
+def allreduce(tensor, group_name: str = "default", op=types.ReduceOp.SUM):
     """
     Collective allreduce the tensor across the group with name group_name.
 
@@ -213,7 +213,7 @@ def allreduce(tensor, group_name: str, op=types.ReduceOp.SUM):
     g.allreduce(tensor, opts)
 
 
-def barrier(group_name):
+def barrier(group_name : str = "default"):
     """
     Barrier all collective process in the group with name group_name.
 
@@ -227,7 +227,10 @@ def barrier(group_name):
     g.barrier()
 
 
-def reduce(tensor, group_name: str, dst_rank: int, op=types.ReduceOp.SUM):
+def reduce(tensor,
+           group_name: str = "default",
+           dst_rank: int = 0,
+           op=types.ReduceOp.SUM):
     """
     Reduce the tensor across the group to the destination rank.
 
@@ -249,6 +252,31 @@ def reduce(tensor, group_name: str, dst_rank: int, op=types.ReduceOp.SUM):
     opts.reduceOp = op
     opts.root_rank = dst_rank
     g.reduce(tensor, opts)
+
+
+def broadcast(tensor,
+              group_name: str = "default",
+              src_rank: int = 0):
+    """
+    Broadcast the tensor
+    Args:
+        tensor:
+        group_name:
+        src_rank:
+
+    Returns:
+        None
+    """
+    _check_single_tensor_input(tensor)
+    g = _check_and_get_group(group_name)
+
+    # check src rank
+    _check_rank_valid(g, src_rank)
+    opts = types.BroadcastOptions()
+    opts.root_rank = src_rank
+    print("reach here...")
+    g.broadcast(tensor, opts)
+
 
 def _check_and_get_group(group_name):
     """Check the existence and return the group handle."""

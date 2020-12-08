@@ -57,3 +57,24 @@ class Worker:
     def report_is_group_initialized(self, group_name="default"):
         is_init = col.is_group_initialized(group_name)
         return is_init
+
+
+def get_actors_group(num_workers=2, group_name="default", backend="nccl"):
+    actors = [Worker.remote() for i in range(num_workers)]
+    world_size = num_workers
+    init_results = ray.get([
+        actor.init_group.remote(world_size, i, backend, group_name)
+        for i, actor in enumerate(actors)
+    ])
+    return actors, init_results
+
+ray.init(num_gpus=2)
+world_size = 2
+print('reach heree..0')
+src_rank = 0
+group_name = 'default'
+actors, _ = get_actors_group(num_workers=world_size, group_name=group_name)
+ray.wait([a.set_buffer.remote(cp.ones((10, ), dtype=cp.float32) * i) for i, a in enumerate(actors)])
+results = ray.get([a.do_broadcast.remote(group_name, src_rank) for a in actors])
+for i in range(world_size):
+    assert (results[i] == cp.ones((10, ), dtype=cp.float32) * src_rank).all()

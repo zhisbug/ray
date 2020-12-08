@@ -9,7 +9,7 @@ from ray.util.collective.collective_group import nccl_util
 from ray.util.collective.collective_group.base_collective_group \
     import BaseGroup
 from ray.util.collective.types import AllReduceOptions, \
-    BarrierOptions, Backend, ReduceOptions
+    BarrierOptions, Backend, ReduceOptions, BroadcastOptions
 from ray.util.collective.const import get_nccl_store_name
 
 logger = logging.getLogger(__name__)
@@ -190,6 +190,28 @@ class NCCLGroup(BaseGroup):
         # in-place reduce
         comm.reduce(ptr, ptr, n_elems, dtype, reduce_op,
                     reduce_options.root_rank, stream.ptr)
+
+    def broadcast(self, tensor, broadcast_options=BroadcastOptions()):
+        """
+        Broadcast tensor to all other processes following options.
+
+        Args:
+            tensor: the tensor to be broadcasted.
+            broadcast_options: broadcast options.
+
+        Returns:
+            None
+        """
+        comm = self._get_nccl_communicator()
+        stream = self._get_cuda_stream()
+
+        dtype = nccl_util.get_nccl_tensor_dtype(tensor)
+        ptr = nccl_util.get_tensor_ptr(tensor)
+        n_elems = nccl_util.get_tensor_n_elements(tensor)
+
+        print("reach here...2")
+        # in-place broadcast
+        comm.broadcast(ptr, ptr, n_elems, dtype, broadcast_options.root_rank, stream.ptr)
 
     def _get_nccl_communicator(self):
         """

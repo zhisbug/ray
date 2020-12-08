@@ -62,10 +62,12 @@ class BaseGroup(six.with_metaclass(ABCMeta)):
     #     pass
     #
     #
-    # @abstractmethod
-    # def broadcast(self):
-    #     pass
-    #
+
+    @abstractmethod
+    def broadcast(self, tensor, broadcast_options=BroadcastOptions()):
+        raise NotImplementedError()
+
+
     # @abstractmethod
     # def reduce_scatter(self):
     #     pass

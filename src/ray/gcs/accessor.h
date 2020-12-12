@@ -543,30 +543,38 @@ class NodeInfoAccessor {
       const std::shared_ptr<rpc::HeartbeatTableData> &data_ptr,
       const StatusCallback &callback) = 0;
 
-  /// Resend heartbeat when GCS restarts from a failure.
-  virtual void AsyncReReportHeartbeat() = 0;
+  /// Report resource usage of a node to GCS asynchronously.
+  ///
+  /// \param data_ptr The data that will be reported to GCS.
+  /// \param callback Callback that will be called after report finishes.
+  /// \return Status
+  virtual Status AsyncReportResourceUsage(
+      const std::shared_ptr<rpc::ResourcesData> &data_ptr,
+      const StatusCallback &callback) = 0;
+
+  /// Resend resource usage when GCS restarts from a failure.
+  virtual void AsyncReReportResourceUsage() = 0;
 
   /// Return resources in last report. Used by light heartbeat.
-  std::shared_ptr<SchedulingResources> &GetLastHeartbeatResources() {
-    return last_heartbeat_resources_;
+  std::shared_ptr<SchedulingResources> &GetLastResourceUsage() {
+    return last_resource_usage_;
   }
 
-  /// Get newest heartbeat of all nodes from GCS asynchronously. Only used when light
-  /// heartbeat enabled.
+  /// Get newest resource usage of all nodes from GCS asynchronously.
   ///
   /// \param callback Callback that will be called after lookup finishes.
   /// \return Status
-  virtual Status AsyncGetAllHeartbeat(
-      const ItemCallback<rpc::HeartbeatBatchTableData> &callback) = 0;
+  virtual Status AsyncGetAllResourceUsage(
+      const ItemCallback<rpc::ResourceUsageBatchData> &callback) = 0;
 
   /// Subscribe batched state of all nodes from GCS.
   ///
-  /// \param subscribe Callback that will be called each time when batch heartbeat is
+  /// \param subscribe Callback that will be called each time when batch resource usage is
   /// updated.
   /// \param done Callback that will be called when subscription is complete.
   /// \return Status
-  virtual Status AsyncSubscribeBatchHeartbeat(
-      const ItemCallback<rpc::HeartbeatBatchTableData> &subscribe,
+  virtual Status AsyncSubscribeBatchedResourceUsage(
+      const ItemCallback<rpc::ResourceUsageBatchData> &subscribe,
       const StatusCallback &done) = 0;
 
   /// Reestablish subscription.
@@ -598,9 +606,9 @@ class NodeInfoAccessor {
   NodeInfoAccessor() = default;
 
  private:
-  /// Cache which stores resources in last heartbeat used to check if they are changed.
-  /// Used by light heartbeat.
-  std::shared_ptr<SchedulingResources> last_heartbeat_resources_ =
+  /// Cache which stores resource usage in last report used to check if they are changed.
+  /// Used by light resource usage report.
+  std::shared_ptr<SchedulingResources> last_resource_usage_ =
       std::make_shared<SchedulingResources>();
 };
 
@@ -749,7 +757,7 @@ class PlacementGroupInfoAccessor {
   virtual Status AsyncGetAll(
       const MultiItemCallback<rpc::PlacementGroupTableData> &callback) = 0;
 
-  /// Remove a placement group to GCS synchronously.
+  /// Remove a placement group to GCS asynchronously.
   ///
   /// \param placement_group_id The id for the placement group to remove.
   /// \param callback Callback that will be called after the placement group is
@@ -757,6 +765,14 @@ class PlacementGroupInfoAccessor {
   /// \return Status
   virtual Status AsyncRemovePlacementGroup(const PlacementGroupID &placement_group_id,
                                            const StatusCallback &callback) = 0;
+
+  /// Wait for a placement group until ready asynchronously.
+  ///
+  /// \param placement_group_id The id for the placement group to wait for until ready.
+  /// \param callback Callback that will be called after the placement group is created.
+  /// \return Status
+  virtual Status AsyncWaitUntilReady(const PlacementGroupID &placement_group_id,
+                                     const StatusCallback &callback) = 0;
 
  protected:
   PlacementGroupInfoAccessor() = default;

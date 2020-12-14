@@ -9,6 +9,8 @@ from ray.util.collective.types import Backend, ReduceOp
 class Worker:
     def __init__(self):
         self.buffer = cp.ones((10, ), dtype=cp.float32)
+        self.list_buffer = [cp.ones((10, ), dtype=cp.float32),
+                            cp.ones((10, ), dtype=cp.float32)]
 
     def init_group(self,
                    world_size,
@@ -22,17 +24,25 @@ class Worker:
         self.buffer = data
         return self.buffer
 
-    def do_work(self, group_name="default", op=ReduceOp.SUM):
+    def set_list_buffer(self, list_of_arrays):
+        self.list_buffer = list_of_arrays
+        return self.list_buffer
+
+    def do_allreduce(self, group_name="default", op=ReduceOp.SUM):
         col.allreduce(self.buffer, group_name, op)
         return self.buffer
 
     def do_reduce(self, group_name="default", dst_rank=0, op=ReduceOp.SUM):
-        col.reduce(self.buffer, group_name, dst_rank, op)
+        col.reduce(self.buffer, dst_rank, group_name, op)
         return self.buffer
 
     def do_broadcast(self, group_name="default", src_rank=0):
-        col.broadcast(self.buffer, group_name, src_rank)
+        col.broadcast(self.buffer, src_rank, group_name)
         return self.buffer
+
+    def do_allgather(self, group_name="default"):
+        col.allgather(self.list_buffer, self.buffer, group_name)
+        return self.list_buffer
 
     def destroy_group(self, group_name="default"):
         col.destroy_collective_group(group_name)
@@ -57,3 +67,13 @@ class Worker:
     def report_is_group_initialized(self, group_name="default"):
         is_init = col.is_group_initialized(group_name)
         return is_init
+
+
+def create_collective_workers(num_workers=2, group_name="default", backend="nccl"):
+    actors = [Worker.remote() for _ in range(num_workers)]
+    world_size = num_workers
+    init_results = ray.get([
+        actor.init_group.remote(world_size, i, backend, group_name)
+        for i, actor in enumerate(actors)
+    ])
+    return actors, init_results

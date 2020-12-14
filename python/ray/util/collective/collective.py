@@ -229,17 +229,17 @@ def barrier(group_name : str = "default"):
 
 
 def reduce(tensor,
-           group_name: str = "default",
            dst_rank: int = 0,
+           group_name: str = "default",
            op=types.ReduceOp.SUM):
     """
     Reduce the tensor across the group to the destination rank.
 
     Args:
-        tensor:
-        group_name:
-        dst_rank:
-        op:
+        tensor: the tensor to be reduced on this process.
+        dst_rank: the rank of the destination process.
+        group_name: the collective group name to perform reduce.
+        op: The reduce operation.
 
     Returns:
         None
@@ -256,14 +256,15 @@ def reduce(tensor,
 
 
 def broadcast(tensor,
-              group_name: str = "default",
-              src_rank: int = 0):
+              src_rank: int = 0,
+              group_name: str = "default"):
     """
-    Broadcast the tensor
+    Broadcast the tensor from a source process to all others.
+
     Args:
-        tensor:
-        group_name:
-        src_rank:
+        tensor: the tensor to be broadcasted (src) or received (destination).
+        src_rank: the rank of the source process.
+        group_name: he collective group name to perform broadcast.
 
     Returns:
         None
@@ -275,8 +276,77 @@ def broadcast(tensor,
     _check_rank_valid(g, src_rank)
     opts = types.BroadcastOptions()
     opts.root_rank = src_rank
-    print("reach here...")
     g.broadcast(tensor, opts)
+
+
+def allgather(tensor_list: list,
+              tensor,
+              group_name: str = "default"):
+    """
+    Allgather tensors from each process of the collective group into a list.
+
+    Args:
+        tensor_list (list): the results, stored as a list of tensors.
+        tensor: the tensor (to be gathered) in the current process
+        group_name: the name of the collective group.
+
+    Returns:
+        None
+    """
+    _check_single_tensor_input(tensor)
+    _check_tensor_list_input(tensor_list)
+    g = _check_and_get_group(group_name)
+    if len(tensor_list) != g.world_size:
+        # here we want to make it more strict than other allgather implementations.
+        raise RuntimeError("The length of the tensor list operands to allgather "
+                           "must not be equal to world_size.")
+    opts = types.AllGatherOptions()
+    g.allgather(tensor_list, tensor, opts)
+
+
+# def gather(tensor,
+#            gather_list: list = None,
+#            dst_rank : int = 0,
+#            group_name: str  = "default"):
+#     """
+#     Gather tensors from each process of the collective group to a destination process.
+#
+#     Args:
+#         tensor: the tensor to be gathered in the current process.
+#         gather_list (list): the resultant list of tensors, not None iff rank == dst_rank.
+#         dst_rank (int): the rank of the destination process.
+#         group_name (str): the name of the collective group.
+#
+#     Returns:
+#         None
+#     """
+
+
+def reducescatter(output,
+                  tensor_list: list,
+                  op=types.ReduceOp.SUM,
+                  group_name: str = "default"):
+    """
+    Reduce a list of tensors across the group, then scatter the result to each process.
+
+    Args:
+        output: the resulted tensor on this process.
+        tensor_list (list): The list of tensors to be reduced and scattered.
+        op: The reduce operation.
+        group_name (str): the name of the collective group.
+
+    Returns:
+        None
+    """
+    _check_single_tensor_input(output)
+    _check_tensor_list_input(tensor_list)
+    g = _check_and_get_group(group_name)
+    if len(tensor_list) != g.world_size:
+        raise RuntimeError("The length of the tensor list operands to reducescatter "
+                           "must not be equal to world_size.")
+    opts = types.ReduceScatterOptions()
+    opts.reduceOp = op
+    g.reducescatter(output, tensor_list, opts)
 
 
 def _check_and_get_group(group_name):
@@ -331,3 +401,13 @@ def _check_rank_valid(g, rank: int):
         raise ValueError("rank '{}' is greater than world size "
                          "'{}'".format(rank, g.world_size))
 
+
+def _check_tensor_list_input(tensor_list):
+    """Check if the input is a list of supported tensor types."""
+    if not isinstance(tensor_list, list):
+        raise RuntimeError("The input must be a list of tensors. "
+                           "Got '{}'.".format(type(tensor_list)))
+    if not tensor_list:
+        raise RuntimeError("Got an empty list of tensors.")
+    for t in tensor_list:
+        _check_single_tensor_input(t)

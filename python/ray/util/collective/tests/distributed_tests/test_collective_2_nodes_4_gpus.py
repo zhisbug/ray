@@ -7,7 +7,7 @@ from ray.util.collective.types import ReduceOp
 import cupy as cp
 import torch
 
-from .util import Worker
+from python.ray.util.collective.tests.util import Worker
 
 
 def get_actors_group(num_workers=2, group_name="default", backend="nccl"):

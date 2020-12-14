@@ -10,7 +10,6 @@ from .util import create_collective_workers
 
 
 @pytest.mark.parametrize("group_name", ["default", "test", "123?34!"])
-# @pytest.mark.parametrize("group_name", ['123?34!'])
 def test_allreduce_different_name(ray_start_single_node_2_gpus, group_name):
     world_size = 2
     actors, _ = create_collective_workers(num_workers=world_size, group_name=group_name)

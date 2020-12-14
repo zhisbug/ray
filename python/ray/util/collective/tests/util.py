@@ -4,6 +4,8 @@ import ray
 import ray.util.collective as col
 from ray.util.collective.types import Backend, ReduceOp
 
+import torch
+
 
 @ray.remote(num_gpus=1)
 class Worker:
@@ -44,6 +46,10 @@ class Worker:
         col.allgather(self.list_buffer, self.buffer, group_name)
         return self.list_buffer
 
+    def do_reducescatter(self, group_name="default", op=ReduceOp.SUM):
+        col.reducescatter(self.buffer, self.list_buffer, group_name, op)
+        return self.buffer
+
     def destroy_group(self, group_name="default"):
         col.destroy_collective_group(group_name)
         return True
@@ -77,3 +83,28 @@ def create_collective_workers(num_workers=2, group_name="default", backend="nccl
         for i, actor in enumerate(actors)
     ])
     return actors, init_results
+
+
+def init_tensors_for_gather_scatter(actors, array_size=10, dtype=cp.float32,
+                                    tensor_backend='cupy'):
+    world_size = len(actors)
+    for i, a in enumerate(actors):
+        if tensor_backend == 'cupy':
+            t = cp.ones(array_size, dtype=dtype) * (i + 1)
+        elif tensor_backend == 'torch':
+            t = torch.ones(array_size, dtype=torch.float32).cuda() * (i + 1)
+        else:
+            raise RuntimeError("Unsupported tensor backend.")
+        ray.wait([a.set_buffer.remote(t)])
+    if tensor_backend == 'cupy':
+        list_buffer = [cp.ones(array_size, dtype=dtype) for _ in range(world_size)]
+    elif tensor_backend == 'torch':
+        list_buffer = [torch.ones(array_size, dtype=torch.float32).cuda() for _ in range(world_size)]
+    else:
+        raise RuntimeError("Unsupported tensor backend.")
+    ray.wait([
+        a.set_list_buffer.remote(list_buffer)
+        for a in actors
+    ])
+
+

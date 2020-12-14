@@ -285,12 +285,13 @@ class NCCLGroup(BaseGroup):
         stream = self._get_cuda_stream()
         dtype = nccl_util.get_nccl_tensor_dtype(tensor_list[0])
         n_elems = nccl_util.get_tensor_n_elements(tensor_list[0])
+        reduce_op = nccl_util.get_nccl_reduce_op(reducescatter_options.reduceOp)
 
         # get the send_ptr
         flattened = _flatten_for_scatter_gather(tensor_list, copy=True)
-        send_ptr = nccl_util.get_nccl_tensor_ptr(flattened)
-        recv_ptr = nccl_util.get_nccl_tensor_ptr(tensor)
-        comm.reduceScatter(send_ptr, recv_ptr, n_elems, dtype, reducescatter_options.reduceOp,
+        send_ptr = nccl_util.get_tensor_ptr(flattened)
+        recv_ptr = nccl_util.get_tensor_ptr(tensor)
+        comm.reduceScatter(send_ptr, recv_ptr, n_elems, dtype, reduce_op,
                            stream.ptr)
 
     def _get_nccl_communicator(self):

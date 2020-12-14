@@ -322,23 +322,23 @@ def allgather(tensor_list: list,
 #     """
 
 
-def reducescatter(output,
+def reducescatter(tensor,
                   tensor_list: list,
-                  op=types.ReduceOp.SUM,
-                  group_name: str = "default"):
+                  group_name: str = "default",
+                  op=types.ReduceOp.SUM):
     """
     Reduce a list of tensors across the group, then scatter the result to each process.
 
     Args:
-        output: the resulted tensor on this process.
+        tensor: the resulted tensor on this process.
         tensor_list (list): The list of tensors to be reduced and scattered.
-        op: The reduce operation.
         group_name (str): the name of the collective group.
+        op: The reduce operation.
 
     Returns:
         None
     """
-    _check_single_tensor_input(output)
+    _check_single_tensor_input(tensor)
     _check_tensor_list_input(tensor_list)
     g = _check_and_get_group(group_name)
     if len(tensor_list) != g.world_size:
@@ -346,7 +346,7 @@ def reducescatter(output,
                            "must not be equal to world_size.")
     opts = types.ReduceScatterOptions()
     opts.reduceOp = op
-    g.reducescatter(output, tensor_list, opts)
+    g.reducescatter(tensor, tensor_list, opts)
 
 
 def _check_and_get_group(group_name):

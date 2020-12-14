@@ -28,6 +28,7 @@ NUMPY_NCCL_DTYPE_MAP = {
 
 if torch_available():
     import torch
+    import torch.utils.dlpack
     TORCH_NCCL_DTYPE_MAP = {
         torch.uint8: nccl.NCCL_UINT8,
         torch.float16: nccl.NCCL_FLOAT16,

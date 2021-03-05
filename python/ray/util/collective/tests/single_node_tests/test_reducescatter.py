@@ -120,6 +120,17 @@ def test_reducescatter_torch_cupy(ray_start_single_node_2_gpus):
             assert (results[i] == cp.ones(shape, dtype=cp.float32) *
                     world_size).all()
 
+@pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
+def test_reducescatter_multistream(ray_start_single_node_2_gpus, num_calls):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    init_tensors_for_gather_scatter(actors)
+    for _ in range(num_calls):
+        results = ray.get([a.do_reducescatter.remote() for a in actors])
+        ray.get([a.set_list_buffer.remote(results) for a in actors])
+    for i in range(world_size):
+        assert(results[i] == cp.ones(
+            (10, ), dtype=cp.float32) * (world_size ** num_calls)).all()
 
 if __name__ == "__main__":
     import pytest

@@ -62,3 +62,34 @@ def test_sendrecv_invalid_rank(ray_start_single_node_2_gpus, dst_rank=3):
     actors, _ = create_collective_workers(world_size)
     with pytest.raises(ValueError):
         _ = ray.get([a.do_send.remote(dst_rank=dst_rank) for a in actors])
+
+@pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
+@pytest.mark.parametrize("dst_rank", [0, 1])
+def test_sendrecv_multistream(ray_start_single_node_2_gpus, num_calls, dst_rank):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    ray.wait([
+        a.set_buffer.remote(cp.ones((10, ), dtype=cp.float32) * (i + 1))
+        for i, a in enumerate(actors)
+    ])
+    src_rank = 1 - dst_rank
+    for i in range(num_calls):
+        refs = []
+        for j, actor in enumerate(actors):
+            # interleave to create potential synchronization problem
+            if i % 2 == 0:
+                if j != dst_rank:
+                    ref = actor.do_send.remote(dst_rank=dst_rank)
+                else:
+                    ref = actor.do_recv.remote(src_rank=src_rank)
+                refs.append(ref)
+            else:
+                if j != src_rank:
+                    ref = actor.do_send.remote(dst_rank=src_rank)
+                else:
+                    ref = actor.do_recv.remote(src_rank=dst_rank)
+                refs.append(ref)
+    results = ray.get(refs)
+    for i in range(world_size):
+        assert (results[i] == cp.ones((10, ), dtype=cp.float32) *
+                (src_rank + 1)).all()

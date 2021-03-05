@@ -124,6 +124,17 @@ def test_allgather_torch_cupy(ray_start_single_node_2_gpus):
                 assert (results[i][j] == cp.ones(shape, dtype=cp.float32) *
                         (j + 1)).all()
 
+@pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
+def test_allgather_multistream(ray_start_single_node_2_gpus, num_calls):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    init_tensors_for_gather_scatter(actors)
+    results = None
+    for _ in range(num_calls):
+        results = ray.get([a.do_allgather.remote() for a in actors])
+    for i in range(world_size):
+        for j in range(world_size):
+            assert (results[i][j] == cp.ones(10, dtype=cp.float32) * (j + 1)).all()
 
 if __name__ == "__main__":
     import pytest

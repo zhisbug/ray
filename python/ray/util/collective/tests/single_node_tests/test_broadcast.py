@@ -65,3 +65,22 @@ def test_broadcast_invalid_rank(ray_start_single_node_2_gpus, src_rank=3):
     actors, _ = create_collective_workers(world_size)
     with pytest.raises(ValueError):
         _ = ray.get([a.do_broadcast.remote(src_rank=src_rank) for a in actors])
+
+@pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
+@pytest.mark.parametrize("src_rank", [0, 1])
+def test_broadcast_multistream(ray_start_single_node_2_gpus, num_calls, src_rank):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    ray.wait([
+        a.set_buffer.remote(cp.ones((10, ), dtype=cp.float32) * (i + 1))
+        for i, a in enumerate(actors)
+    ])
+    for i in range(num_calls): 
+        # interleave src_rank to create potential synchronization error
+        if i % 2 == 0:
+            results = ray.get([a.do_broadcast.remote(src_rank=src_rank) for a in actors])
+        else:
+            results = ray.get([a.do_broadcast.remote(src_rank=1-src_rank) for a in actors])
+    for i in range(world_size):
+        assert (results[i] == cp.ones(
+            (10, ), dtype=cp.float32) * (src_rank + 1)).all()

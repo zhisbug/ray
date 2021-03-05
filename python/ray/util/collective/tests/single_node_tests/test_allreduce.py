@@ -136,6 +136,16 @@ def test_allreduce_torch_cupy(ray_start_single_node_2_gpus):
     with pytest.raises(RuntimeError):
         results = ray.get([a.do_allreduce.remote() for a in actors])
 
+@pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
+def test_allreduce_multistream(ray_start_single_node_2_gpus, num_calls):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    for _ in range(num_calls):
+        results = ray.get([a.do_allreduce.remote() for a in actors])
+    assert(results[0] == cp.ones(
+        (10, ), dtype=cp.float32) * (world_size**num_calls)).all()
+    assert(results[1] == cp.ones(
+        (10, ), dtype=cp.float32) * (world_size**num_calls)).all()
 
 if __name__ == "__main__":
     import pytest

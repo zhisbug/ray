@@ -141,3 +141,17 @@ def test_reduce_invalid_rank(ray_start_single_node_2_gpus, dst_rank=3):
     actors, _ = create_collective_workers(world_size)
     with pytest.raises(ValueError):
         _ = ray.get([a.do_reduce.remote(dst_rank=dst_rank) for a in actors])
+
+@pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
+@pytest.mark.parametrize("dst_rank", [0, 1])
+def test_reduce_multistream(ray_start_single_node_2_gpus, num_calls, dst_rank):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    for _ in range(num_calls):
+        results = ray.get([a.do_reduce.remote(dst_rank=dst_rank) for a in actors])
+    for i in range(world_size):
+        if i == dst_rank:
+            assert (results[i] == cp.ones(
+                (10, ), dtype=cp.float32) * (num_calls * (world_size - 1) + 1)).all()
+        else:
+            assert (results[i] == cp.ones((10, ), dtype=cp.float32)).all()

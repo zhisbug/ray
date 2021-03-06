@@ -137,7 +137,7 @@ def test_allreduce_torch_cupy(ray_start_single_node_2_gpus):
         results = ray.get([a.do_allreduce.remote() for a in actors])
 
 @pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
-def test_allreduce_multistream(ray_start_single_node_2_gpus, num_calls):
+def test_allreduce_multiple_call(ray_start_single_node_2_gpus, num_calls):
     world_size = 2
     actors, _ = create_collective_workers(world_size)
     for _ in range(num_calls):
@@ -146,6 +146,26 @@ def test_allreduce_multistream(ray_start_single_node_2_gpus, num_calls):
         (10, ), dtype=cp.float32) * (world_size**num_calls)).all()
     assert(results[1] == cp.ones(
         (10, ), dtype=cp.float32) * (world_size**num_calls)).all()
+
+@pytest.mark.parametrize("num_groups", [2, 4])
+@pytest.mark.parametrize("num_calls", [2, 4, 6, 8, 12])
+def test_allreduce_multiple_group_call(ray_start_single_node_2_gpus, num_groups, num_calls):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    for group_name in range(1, num_groups):
+        ray.get([
+            actor.init_group.remote(world_size, i, group_name=str(group_name))
+            for i, actor in enumerate(actors)
+        ])
+    count = 0
+    for _ in range(num_calls):
+        for i in range(num_groups):
+            count += 1
+            group_name = "default" if i == 0 else str(i)
+            results = ray.get([a.do_allreduce.remote(group_name) for a in actors])
+            assert (results[0] == cp.ones(
+                (10, ), dtype=cp.float32) * (world_size**count)).all()
+
 
 if __name__ == "__main__":
     import pytest

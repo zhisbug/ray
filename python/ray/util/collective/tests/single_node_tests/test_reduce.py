@@ -144,7 +144,7 @@ def test_reduce_invalid_rank(ray_start_single_node_2_gpus, dst_rank=3):
 
 @pytest.mark.parametrize("num_calls", [2, 4, 8, 16, 32, 48])
 @pytest.mark.parametrize("dst_rank", [0, 1])
-def test_reduce_multistream(ray_start_single_node_2_gpus, num_calls, dst_rank):
+def test_reduce_multiple_call(ray_start_single_node_2_gpus, num_calls, dst_rank):
     world_size = 2
     actors, _ = create_collective_workers(world_size)
     for _ in range(num_calls):
@@ -155,3 +155,27 @@ def test_reduce_multistream(ray_start_single_node_2_gpus, num_calls, dst_rank):
                 (10, ), dtype=cp.float32) * (num_calls * (world_size - 1) + 1)).all()
         else:
             assert (results[i] == cp.ones((10, ), dtype=cp.float32)).all()
+
+@pytest.mark.parametrize("num_groups", [2, 4])
+@pytest.mark.parametrize("num_calls", [2, 4, 6, 8, 12])
+@pytest.mark.parametrize("dst_rank", [0, 1])
+def test_reduce_multiple_group_call(ray_start_single_node_2_gpus, num_groups, num_calls, dst_rank):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    for group_name in range(1, num_groups):
+        ray.get([
+            actor.init_group.remote(world_size, i, group_name=str(group_name))
+            for i, actor in enumerate(actors)
+        ])
+    count = 0
+    for _ in range(num_calls):
+        for i in range(num_groups):
+            count += 1
+            group_name = "default" if i == 0 else str(i)
+            results = ray.get([a.do_reduce.remote(group_name, dst_rank=dst_rank) for a in actors])
+            for i in range(world_size):
+                if i == dst_rank:
+                    assert (results[i] == cp.ones(
+                        (10, ), dtype=cp.float32) * (count * (world_size - 1) + 1)).all()
+                else:
+                    assert (results[i] == cp.ones((10, ), dtype=cp.float32)).all()

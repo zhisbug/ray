@@ -93,3 +93,49 @@ def test_sendrecv_multistream(ray_start_single_node_2_gpus, num_calls, dst_rank)
     for i in range(world_size):
         assert (results[i] == cp.ones((10, ), dtype=cp.float32) *
                 (src_rank + 1)).all()
+
+@pytest.mark.parametrize("num_groups", [2, 4])
+@pytest.mark.parametrize("num_calls", [2, 4, 6, 8, 12])
+@pytest.mark.parametrize("dst_rank", [0, 1])
+def test_sendrecv_multiple_group_call(ray_start_single_node_2_gpus, num_groups, num_calls, dst_rank):
+    world_size = 2
+    actors, _ = create_collective_workers(world_size)
+    ray.wait([
+        a.set_buffer.remote(cp.ones((10, ), dtype=cp.float32) * (i + 1))
+        for i, a in enumerate(actors)
+    ])
+    for group_name in range(1, num_groups):
+        ray.get([
+            actor.init_group.remote(world_size, i, group_name=str(group_name))
+            for i, actor in enumerate(actors)
+        ])
+    src_rank = 1 - dst_rank
+    for _ in range(num_calls):
+        for i in range(num_groups):
+            refs = []
+            for j, actor in enumerate(actors):
+                # interleave to create potential synchronization problem
+                if i % 2 == 0:
+                    if j != dst_rank:
+                        ref = actor.do_send.remote(dst_rank=dst_rank)
+                    else:
+                        ref = actor.do_recv.remote(src_rank=src_rank)
+                    refs.append(ref)
+                else:
+                    if j != src_rank:
+                        ref = actor.do_send.remote(dst_rank=src_rank)
+                    else:
+                        ref = actor.do_recv.remote(src_rank=dst_rank)
+                    refs.append(ref)
+                ray.wait([
+                    a.set_buffer.remote(cp.ones((10, ), dtype=cp.float32) * (i + 1))
+                    for i, a in enumerate(actors)
+                ])
+            results = ray.get(refs)
+            for j in range(world_size):
+                if i % 2 == 0:
+                    assert (results[j] == cp.ones((10, ), dtype=cp.float32) *
+                        (src_rank + 1)).all()
+                else:
+                    assert (results[j] == cp.ones((10, ), dtype=cp.float32) *
+                        (dst_rank + 1)).all()

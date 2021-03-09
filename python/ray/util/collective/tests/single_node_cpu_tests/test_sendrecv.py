@@ -64,8 +64,16 @@ def test_sendrecv_torch_numpy(ray_start_single_node, dst_rank, backend):
 
 
 @pytest.mark.parametrize("backend", [Backend.GLOO])
-def test_sendrecv_invalid_rank(ray_start_single_node, backend, dst_rank=3):
+def test_sendrecv_invalid_rank(ray_start_single_node,
+                               backend, dst_rank=3):
     world_size = 2
     actors, _ = create_collective_workers(world_size, backend=backend)
     with pytest.raises(ValueError):
         _ = ray.get([a.do_send.remote(dst_rank=dst_rank) for a in actors])
+
+
+if __name__ == "__main__":
+    import pytest
+    import sys
+
+    sys.exit(pytest.main(["-v", "-x", __file__]))

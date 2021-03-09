@@ -1,4 +1,4 @@
-"""Test the collective reducescatter API."""
+"""Test the collective reducescatter API on a distributed Ray cluster."""
 import pytest
 import ray
 
@@ -14,10 +14,9 @@ from ray.util.collective.tests.cpu_util import create_collective_workers, \
 @pytest.mark.parametrize("tensor_backend", ["numpy", "torch"])
 @pytest.mark.parametrize("array_size",
                          [2, 2**5, 2**10, 2**15, 2**20, [2, 2], [5, 5, 5]])
-def test_reducescatter_different_array_size(ray_start_single_node,
-                                            array_size, tensor_backend,
-                                            backend):
-    world_size = 2
+def test_reducescatter_different_array_size(
+        ray_start_distributed_2_nodes, array_size, tensor_backend, backend):
+    world_size = 4
     actors, _ = create_collective_workers(world_size, backend=backend)
     init_tensors_for_gather_scatter(
         actors, array_size=array_size, tensor_backend=tensor_backend)
@@ -34,8 +33,9 @@ def test_reducescatter_different_array_size(ray_start_single_node,
 @pytest.mark.parametrize("backend", [Backend.GLOO])
 @pytest.mark.parametrize("dtype",
                          [np.uint8, np.float16, np.float32, np.float64])
-def test_reducescatter_different_dtype(ray_start_single_node, dtype, backend):
-    world_size = 2
+def test_reducescatter_different_dtype(ray_start_distributed_2_nodes,
+                                       dtype, backend):
+    world_size = 4
     actors, _ = create_collective_workers(world_size, backend=backend)
     init_tensors_for_gather_scatter(actors, dtype=dtype)
     results = ray.get([a.do_reducescatter.remote() for a in actors])
@@ -45,8 +45,8 @@ def test_reducescatter_different_dtype(ray_start_single_node, dtype, backend):
 
 
 @pytest.mark.parametrize("backend", [Backend.GLOO])
-def test_reducescatter_torch_numpy(ray_start_single_node, backend):
-    world_size = 2
+def test_reducescatter_torch_numpy(ray_start_distributed_2_nodes, backend):
+    world_size = 4
     shape = [10, 10]
     actors, _ = create_collective_workers(world_size, backend=backend)
 

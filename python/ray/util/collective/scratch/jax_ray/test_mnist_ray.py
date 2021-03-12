@@ -86,8 +86,8 @@ class Worker:
                 g_cp = cp.fromDlpack(g_jdp)
                 col.allreduce(g_cp, group_name="default")
             return self.opt_update(i, grad(self.loss)(params, batch), opt_state)
-        # self.update = update
-        self.update = jax.jit(update)
+        self.update = update
+        # self.update = jax.jit(update)
 
     def init_group(self,
                    world_size,
@@ -102,9 +102,9 @@ class Worker:
 
     def run(self):
         if not self.train_dataloader:
-            raise RuntimeError("Train dataloader hasn't be set.")
+            raise RuntimeError("Train dataloader hasn't been set.")
         if not self.test_dataloader:
-            raise RuntimeError("Test dataloader hasn't be set.")
+            raise RuntimeError("Test dataloader hasn't been set.")
 
         for epoch in range(self.num_epochs):
             start_time = time.time()
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_ids))
     num_gpus = len(gpu_ids)
 
-    ray.init(num_gpus=num_gpus, num_cpus=4, local_mode=True)
+    ray.init(num_gpus=num_gpus, num_cpus=4) # , local_mode=True # when using local_mode, gpu can't be visible
 
     train_images, train_labels, test_images, test_labels = datasets.mnist()
     train_images = train_images.reshape(train_images.shape[0], 1, 28, 28).transpose(2, 3, 1, 0)

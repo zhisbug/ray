@@ -1,6 +1,7 @@
 """A basic MNIST example using Numpy and JAX.
 
-The primary aim here is simplicity and minimal dependencies.
+Run ResNet18 in MNIST dataset on one GPU.
+Test
 """
 import time
 
@@ -14,10 +15,6 @@ from jax.experimental import optimizers
 import jax.numpy as jnp
 import datasets
 from resnet import ResNet18
-
-import ray
-import ray.util.collective as col
-import cupy as cp
 import os
 
 
@@ -36,7 +33,7 @@ class Dataloader:
 
     def synth_batches(self):
         num_imgs = self.target.shape[0]
-        rng = npr.RandomState(np.random.randint(10))
+        rng = npr.RandomState(0)
         perm = rng.permutation(num_imgs)
         for i in range(self.num_batches):
             batch_idx = perm[i * self.batch_size:(i + 1) * self.batch_size]
@@ -48,7 +45,6 @@ class Dataloader:
         return self.synth_batches()
 
 
-@ray.remote(num_gpus=1, num_cpus=1)
 class Worker:
     def __init__(self):
         rng_key = random.PRNGKey(0)
@@ -74,48 +70,13 @@ class Worker:
 
         self.steps = 0
 
-
-        def update_without_jit(i, opt_state, batch):
+        def update(i, opt_state, batch):
             params = self.get_params(opt_state)
             gradient = grad(self.loss)(params, batch)
 
-            ftree, tree = tree_flatten(gradient)
-            for g in ftree:
-                g_jdp = dlpack.to_dlpack(g)
-                g_cp = cp.fromDlpack(g_jdp)
-                col.allreduce(g_cp, group_name="default")
             return self.opt_update(i, gradient, opt_state)
 
-        def update_with_jit(i, opt_state, batch):
-            @jit
-            def part1(opt_state, batch):
-                params = self.get_params(opt_state)
-                return grad(self.loss)(params, batch)
-            @jit
-            def part2(i, gradient, opt_state):
-                return self.opt_update(i, gradient, opt_state)
-
-            gradient = part1(opt_state, batch)
-            ftree, tree = tree_flatten(gradient)
-            for g in ftree:
-                col.allreduce(cp.fromDlpack(dlpack.to_dlpack(g)),
-                            group_name="default")
-            return part2(i, gradient, opt_state)
-
-        self.update_without_jit = update_without_jit
-        self.update_with_jit = update_with_jit
-
-    def init_group(self,
-                   world_size,
-                   rank,
-                   backend="nccl",
-                   group_name="default"):
-        col.init_collective_group(world_size, rank, backend, group_name)
-        param = self.get_params(self.opt_state)
-        ftree, tree = tree_flatten(param)
-        for g in ftree:
-            col.allreduce(cp.fromDlpack(dlpack.to_dlpack(g)),
-                          group_name="default")
+        self.update = update # jax.jit(update)
 
     def set_dataloader(self, train_dataloader, test_dataloader):
         self.train_dataloader = train_dataloader
@@ -123,15 +84,14 @@ class Worker:
 
     def set_jit(self, enable_jit):
         if enable_jit:
-            self.update = self.update_with_jit
-        else:
-            self.update = self.update_without_jit
+            self.update = jit(self.update)
+            print("Worker runs in jit mode")
 
     def run(self):
         if not self.train_dataloader:
-            raise RuntimeError("Train dataloader hasn't been set.")
+            raise RuntimeError("Train dataloader hasn't be set.")
         if not self.test_dataloader:
-            raise RuntimeError("Test dataloader hasn't been set.")
+            raise RuntimeError("Test dataloader hasn't be set.")
 
         for epoch in range(self.num_epochs):
             start_time = time.time()
@@ -167,12 +127,8 @@ class Worker:
 
 
 if __name__ == "__main__":
-    gpu_ids = [0,6]
-    os.environ["CUDA_VISIBLE_DEVICES"] = ",".join(map(str, gpu_ids))
-    num_gpus = len(gpu_ids)
+    os.environ["CUDA_VISIBLE_DEVICES"] = "6"
     enable_jit = False
-
-    ray.init(num_gpus=num_gpus, num_cpus=6)
 
     train_images, train_labels, test_images, test_labels = datasets.mnist()
     train_images = train_images.reshape(train_images.shape[0], 1, 28, 28).transpose(2, 3, 1, 0)
@@ -181,15 +137,10 @@ if __name__ == "__main__":
     train_dataloader = Dataloader(train_images, train_labels, batch_size=128)
     test_dataloader = Dataloader(test_images, test_labels, batch_size=128)
 
-    actors = [Worker.remote() for _ in range(num_gpus)]
+    worker = Worker()
     print("worker init")
-    ray.get([actor.init_group.remote(num_gpus, rank, group_name="default")
-             for rank, actor in enumerate(actors)])
-    print("worker init_group")
-    ray.get([actor.set_dataloader.remote(train_dataloader, test_dataloader)
-            for actor in actors])
-    ray.get([actor.set_jit.remote(enable_jit)
-            for actor in actors])
+    worker.set_dataloader(train_dataloader, test_dataloader)
+    worker.set_jit(enable_jit)
 
-    ray.get([actor.run.remote() for actor in actors])
+    worker.run()
 

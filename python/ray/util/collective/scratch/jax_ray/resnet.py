@@ -94,7 +94,7 @@ def ResNet18(num_classes):
       return stax.serial(
       GeneralConv(('HWCN', 'OIHW', 'NHWC'), 1, (7, 7), (2, 2), 'SAME'),
       BatchNorm(), Relu, MaxPool((3, 3), strides=(2, 2)),
-      BasicBlock(3, [64, 64], strides=(1, 1)),
+      BasicBlock(3, [64, 64]),
       IdentityBlock(3, [64, 64]),
       BasicBlock(3, [128, 128]),
       IdentityBlock(3, [128, 128]),

@@ -18,6 +18,34 @@ from resnet import ResNet18
 import os
 
 
+class TimeMeter:
+    def __init__(self):
+        self.world_size = None
+        self.batch_size = None
+        self.time = 0
+        self.steps = 0
+        self.data_num = 0
+
+    def set_world_size(self, world_size):
+        self.world_size = world_size
+
+    def start_timer(self):
+        self.start_time = time.time()
+
+    def stop_timer(self):
+        self.time += time.time() - self.start_time
+        self.start_time = None
+
+    def step(self, batch_size):
+        self.data_num += batch_size * self.world_size
+        self.steps += 1
+        self.time += time.time() - self.start_time
+        self.start_time = time.time()
+        if not self.steps % 200:
+            print(f"Step {self.steps} passing {self.data_num} data after {self.time} sec",
+                    "Throughout: {:.2f}".format(self.data_num/self.time))
+
+
 class Dataloader:
     def __init__(self, data, target, batch_size=128):
         '''
@@ -69,6 +97,8 @@ class Worker:
         self.predict_fun = predict_fun
 
         self.steps = 0
+        self.meter = TimeMeter()
+        self.meter.set_world_size(1)
 
         def update(i, opt_state, batch):
             params = self.get_params(opt_state)
@@ -95,11 +125,14 @@ class Worker:
 
         for epoch in range(self.num_epochs):
             start_time = time.time()
+            self.meter.start_timer()
             for idx, batch in enumerate(self.train_dataloader):
                 self.opt_state = self.update(self.steps,
                                              self.opt_state,
                                              batch)
                 self.steps+=1
+                self.meter.step(batch[1].shape[0])
+            self.meter.stop_timer()
             epoch_time = time.time() - start_time
             test_start_time = time.time()
             params = self.get_params(self.opt_state)

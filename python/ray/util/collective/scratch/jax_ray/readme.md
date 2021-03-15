@@ -1,4 +1,4 @@
-# Without collective communication, Adam(lr=0.01)
+# MNIST Without collective communication, Adam(lr=0.01)
 
 ## ResNet18-2080ti-128batch_size
 - Step200: 100.71 data/sec

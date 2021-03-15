@@ -28,3 +28,17 @@
 - Step 1600 60.44 data/sec
 - Step 1800 59.89 data/sec
 - Epoch 3 in 1025.45 sec, test time 18.65 sec. test accuracy 0.9815
+
+## ResNet101-2080ti-128batch_size
+- Step200: 29.33 data/sec
+- Step400: 30.31 data/sec
+- Epoch 0 in 1980.37 sec, test time 43.67 sec, test accuracy:0.9580
+- Step600: 29.92 data/sec
+- Step800: 30.38 data/sec
+- Epoch 1 in 1930.71 sec, test time 34.77 sec, test accuracy:0.9650
+- Step1000: 30.79 data/sec
+- Step1200: 31.04 data/sec
+- Epoch 2 in 1848.75 sec, test time 34.44 sec. test accuracy 0.9760
+- Step 1600 31.39 data/sec
+- Step 1800 31.51 data/sec
+- Epoch 3 in 1852.36 sec, test time 14.47 sec. test accuracy 0.9792

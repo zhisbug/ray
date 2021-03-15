@@ -67,6 +67,46 @@ def BasicBlock(kernel_size, filters, strides=(1, 1)):
 # ResNet architectures compose layers and ResNet blocks
 
 
+def ResNet101(num_classes):
+      return stax.serial(
+      GeneralConv(('HWCN', 'OIHW', 'NHWC'), 64, (7, 7), (2, 2), 'SAME'),
+      BatchNorm(), Relu, MaxPool((3, 3), strides=(2, 2)),
+      ConvBlock(3, [64, 64, 256], strides=(1, 1)),
+      IdentityBlock(3, [64, 64]),
+      IdentityBlock(3, [64, 64]),
+      ConvBlock(3, [128, 128, 512]),
+      IdentityBlock(3, [128, 128]),
+      IdentityBlock(3, [128, 128]),
+      IdentityBlock(3, [128, 128]),
+      ConvBlock(3, [256, 256, 1024]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      IdentityBlock(3, [256, 256]),
+      ConvBlock(3, [512, 512, 2048]),
+      IdentityBlock(3, [512, 512]),
+      IdentityBlock(3, [512, 512]),
+      AvgPool((7, 7), padding="SAME"), Flatten, Dense(num_classes), LogSoftmax)
+
+
 def ResNet50(num_classes):
   return stax.serial(
       GeneralConv(('HWCN', 'OIHW', 'NHWC'), 64, (7, 7), (2, 2), 'SAME'),

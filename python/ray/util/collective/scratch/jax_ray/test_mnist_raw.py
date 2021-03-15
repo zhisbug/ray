@@ -14,7 +14,7 @@ from jax.tree_util import tree_flatten
 from jax.experimental import optimizers
 import jax.numpy as jnp
 import datasets
-from resnet import ResNet18
+from resnet import ResNet18, ResNet50, ResNet101
 import os
 
 
@@ -83,7 +83,7 @@ class Worker:
         self.lr = 0.01
         self.num_epochs = 10
 
-        init_fun, predict_fun = ResNet18(self.num_classes)
+        init_fun, predict_fun = ResNet101(self.num_classes)
         _, init_params = init_fun(rng_key, self.input_shape)
 
         opt_init, opt_update, get_params = optimizers.adam(self.lr)

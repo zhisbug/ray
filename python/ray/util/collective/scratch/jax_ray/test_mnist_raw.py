@@ -160,7 +160,7 @@ class Worker:
 
 
 if __name__ == "__main__":
-    os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "7"
     enable_jit = False
 
     train_images, train_labels, test_images, test_labels = datasets.mnist()

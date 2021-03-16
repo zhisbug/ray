@@ -46,7 +46,16 @@
 # MNIST With collective communication, Adam(lr=0.01)
 
 ## ResNet18-2x2080ti-128batch_size
-- Step200: 193.42 data/sec
-- Step400: 201.38 data/sec
-- Epoch 0 in 603.3 sec, test time 15.42 sec, test accuracy:0.9152
-- Step600: 197.82 data/sec
+- Step200: 194.62 data/sec
+- Step400: 204.16 data/sec
+- Epoch 0 in 592.16 sec, test time 15.5 sec, test accuracy:0.9221
+- Step600: 203.8 data/sec
+- Step800: 205.67 data/sec
+- Epoch 1 in 563.78 sec, test time 10.13 sec, test accuracy: 0.9484
+- Step1000: 207.73 data/sec
+- Step1200: 209.25 data/sec
+- Step1400: 210.28 data/sec
+- Epoch 2 in 553.28 sec, test time 10.00 sec, test accuracy: 0.9534
+- Step1600: 211.12 data/sec
+- Step1800: 210.97 data/sec
+- Epoch 3 in 562.83 sec, test time 9.85 sec, test accuracy: 0.9643
